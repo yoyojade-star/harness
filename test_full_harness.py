@@ -165,4 +165,4 @@ class SpecificationHarness:
 
 if __name__ == "__main__":
     harness = SpecificationHarness()
-    harness.run_workflow("Create for locally hosted ai coding agent in the lab, with few software engineer, and ci infrastructure, they don't have access to external internet or shouldn't")
+    harness.run_workflow("Based on user's input of stock symbol, the system fetch the latest news and price for the stock and respond with the suggestion of hold, sell or buy, confident level, and reasoning etc")
