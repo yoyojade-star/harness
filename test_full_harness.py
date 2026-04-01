@@ -102,6 +102,67 @@ class EngineeringHarness:
                 f.write(data)
         print("\n[DONE] All systems go. Check the /output folder.")
 
+
+class SpecificationHarness:
+    """PRD, architecture (human-in-the-loop), and ARD only — no implementation or test agents."""
+
+    def __init__(self):
+        self.state = {"prd": "", "arch": "", "ard": ""}
+
+    def call_agent(self, instruction, user_input):
+        response = client.models.generate_content(
+            model=MODEL_ID,
+            config=types.GenerateContentConfig(
+                system_instruction=instruction,
+                temperature=0.1,
+            ),
+            contents=user_input,
+        )
+        return response.text
+
+    def architecture_loop(self):
+        current_design = self.call_agent(
+            personas.ARCHITECT_INSTRUCTIONS, self.state["prd"]
+        )
+        history = []
+        while True:
+            print(f"\n--- PROPOSED DESIGN ---\n{current_design}\n")
+            feedback = input("[Human]: Type 'approve' or provide feedback: ")
+            if feedback.lower() == "approve":
+                ard = self.call_agent(
+                    personas.ARD_GENERATOR_INSTRUCTIONS,
+                    f"Design: {current_design}\nHistory: {history}",
+                )
+                self.state["ard"] = ard
+                return current_design
+            history.append(feedback)
+            current_design = self.call_agent(
+                personas.ARCHITECT_REFINEMENT_INSTRUCTIONS,
+                f"Prev: {current_design}\nFeedback: {feedback}",
+            )
+
+    def run_workflow(self, idea):
+        print("[Step 1] Generating Product Spec...")
+        self.state["prd"] = self.call_agent(personas.PO_INSTRUCTIONS, idea)
+
+        print("[Step 2] Designing Architecture (human review)...")
+        self.state["arch"] = self.architecture_loop()
+
+        self.save_output()
+
+    def save_output(self):
+        os.makedirs("output", exist_ok=True)
+        files = {
+            "output/PRD.md": self.state["prd"],
+            "output/ARCH.md": self.state["arch"],
+            "output/ARD.md": self.state["ard"],
+        }
+        for path, data in files.items():
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(data)
+        print("\n[DONE] PRD, ARCH, and ARD saved under output/.")
+
+
 if __name__ == "__main__":
-    harness = EngineeringHarness()
-    harness.run_workflow("Live Auction Platform - where sellers can list items for auction and buyers can bid on them")
+    harness = SpecificationHarness()
+    harness.run_workflow("Create for locally hosted ai coding agent in the lab, with few software engineer, and ci infrastructure, they don't have access to external internet or shouldn't")
